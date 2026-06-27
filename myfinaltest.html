@@ -1,158 +1,192 @@
 <!DOCTYPE html>
 <html lang="zh">
-
 <head>
-    <meta charset="UTF-8">
-    <title>元素合成原型</title>
-    <style>
-        body {
-            font-family: Arial;
-            background: #111;
-            color: #eee;
-            padding: 20px;
-        }
-
-        h2 {
-            color: #6cf;
-        }
-
-        button {
-            margin: 4px;
-            padding: 8px;
-            cursor: pointer;
-        }
-
-        .box {
-            border: 1px solid #444;
-            padding: 10px;
-            margin: 10px 0;
-        }
-
-        .element {
-            display: inline-block;
-            padding: 5px 10px;
-            margin: 3px;
-            background: #333;
-            border-radius: 5px;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>元素合成增量原型</title>
+<style>
+body { background:#111; color:#eee; font-family:Arial; padding:20px; }
+h2 { color:#6cf; }
+.box { border:1px solid #444; padding:10px; margin:10px 0; }
+button { margin:3px; padding:6px; cursor:pointer; }
+.element { padding:4px 8px; background:#333; margin:3px; display:inline-block; border-radius:4px; }
+.core { min-height:40px; border:1px dashed #666; padding:10px; }
+</style>
 </head>
-
 <body>
 
-    <h2>魔能：<span id="mana">0</span></h2>
+<h2>魔能：<span id="mana">0</span></h2>
 
-    <div class="box">
-        <h3>初始元素</h3>
-        <div id="tier1"></div>
-    </div>
+<div class="box">
+<h3>精華</h3>
+<div id="essence"></div>
+</div>
 
-    <div class="box">
-        <h3>中階元素</h3>
-        <div id="tier2"></div>
-    </div>
+<div class="box">
+<h3>初始元素</h3>
+<div id="elements"></div>
+</div>
 
-    <div class="box">
-        <h3>高階元素</h3>
-        <div id="tier3"></div>
-    </div>
+<div class="box">
+<h3>魔能核心（active）</h3>
+<div id="core" class="core"></div>
+</div>
 
-    <div class="box">
-        <h3>合成區</h3>
-        <div id="selected"></div>
-        <button onclick="craft()">合成</button>
-    </div>
+<div class="box">
+<h3>合成區</h3>
+<div id="craft"></div>
+<button onclick="doCraft()">合成</button>
+</div>
 
-    <script>
-        // ===== 基礎資料 =====
-        let mana = 0;
+<script>
 
-        const tier1 = {
-            "地": "地",
-            "水": "水",
-            "火": "火",
-            "風": "風"
-        };
+// ===== 基礎 =====
+let mana = 0;
+let time = 0;
 
-        const tier2 = {
-            "地+水": "泥沼",
-            "地+火": "熔岩",
-            "地+風": "沙塵",
-            "水+火": "蒸氣",
-            "水+風": "霧氣",
-            "火+風": "雷電"
-        };
+const baseElements = ["地","水","火","風"];
 
-        const tier3 = {
-            "地+水+火": "熔潮核團",
-            "地+水+風": "霧塵核團",
-            "地+火+風": "灼嵐核團",
-            "水+火+風": "雷霧核團"
-        };
+let state = {
+  core: [],
+  idle: ["地","水","火","風"],
+  level: {"地":1,"水":1,"火":1,"風":1},
+  exp: {"地":0,"水":0,"火":0,"風":0},
+  essence: {"地":0,"水":0,"火":0,"風":0},
+  cooldown: false
+};
 
-        let selected = [];
+// ===== 工具 =====
+function avgLv(a,b){
+  return (state.level[a] + state.level[b]) / 2;
+}
 
-        // ===== UI =====
-        function render() {
-            document.getElementById("mana").innerText = mana;
+// 非線性成本
+function cost(lv, tier){
+  return Math.ceil(2 * Math.pow(lv,1.6) * Math.pow(tier,2.2));
+}
 
-            renderGroup("tier1", tier1);
-            renderGroup("tier2", tier2);
-            renderGroup("tier3", tier3);
+// ===== UI =====
+function render(){
+  document.getElementById("mana").innerText = mana;
 
-            document.getElementById("selected").innerHTML =
-                selected.map(e => `<span class="element">${e}</span>`).join("");
-        }
+  // 元素
+  let el = document.getElementById("elements");
+  el.innerHTML = state.idle.map(e =>
+    `<button onclick="toCore('${e}')">${e} Lv${state.level[e]}</button>`
+  ).join("");
 
-        function renderGroup(id, group) {
-            let div = document.getElementById(id);
-            div.innerHTML = "";
+  // core
+  document.getElementById("core").innerHTML =
+    state.core.map(e=>`<span class="element">${e}</span>`).join("");
 
-            for (let key in group) {
-                let btn = document.createElement("button");
-                btn.innerText = group[key];
-                btn.onclick = () => select(key);
-                div.appendChild(btn);
-            }
-        }
+  // essence
+  let es = document.getElementById("essence");
+  es.innerHTML = baseElements.map(e =>
+    `${e}精華: ${state.essence[e] || 0} <button onclick="convert('${e}')">轉換</button>`
+  ).join("<br>");
+}
 
-        // ===== 選擇元素 =====
-        function select(el) {
-            if (selected.length < 3) {
-                selected.push(el);
-            }
-            render();
-        }
+// ===== 核心 =====
+function toCore(e){
+  let i = state.idle.indexOf(e);
+  if(i>-1){
+    state.idle.splice(i,1);
+    state.core.push(e);
+  }
+  render();
+}
 
-        // ===== 合成 =====
-        function craft() {
-            selected.sort();
+// ===== 魔能產出 + EXP =====
+setInterval(()=>{
+  time++;
 
-            let key = selected.join("+");
+  state.core.forEach(e=>{
+    let base = 10;
+    let lv = state.level[e];
 
-            let result = tier3[key] || tier2[key] || null;
+    let gain = base * lv * 1.1;
+    mana += gain;
 
-            if (result) {
-                mana += 10;
+    state.exp[e] += gain * 0.5;
 
-                alert("成功合成：" + result);
-            } else {
-                alert("無效合成");
-            }
+    // 升級
+    let need = 50 * Math.pow(lv,1.7);
+    if(state.exp[e] > need){
+      state.level[e]++;
+      state.exp[e] = 0;
+    }
+  });
 
-            selected = [];
-            render();
-        }
+  // idle → 精華 + EXP
+  state.idle.forEach(e=>{
+    state.essence[e] += state.level[e] * 2;
+    state.exp[e] += state.level[e];
 
-        // ===== 魔能系統 =====
-        setInterval(() => {
-            mana += 1;
-            render();
-        }, 1000);
+    let need = 50 * Math.pow(state.level[e],1.7);
+    if(state.exp[e] > need){
+      state.level[e]++;
+      state.exp[e]=0;
+    }
+  });
 
-        render();
-    </script>
+  render();
+},1000);
+
+// ===== 精華轉換 =====
+function convert(e){
+  let from = state.essence[e];
+  if(from >= 10){
+    state.essence[e] -= 10;
+    let target = baseElements[(baseElements.indexOf(e)+1)%4];
+    state.essence[target] = (state.essence[target]||0)+1;
+  }
+  render();
+}
+
+// ===== 合成 =====
+function doCraft(){
+  if(state.cooldown) return alert("冷卻中");
+
+  if(state.core.length != 2){
+    return alert("需兩元素");
+  }
+
+  let a = state.core[0];
+  let b = state.core[1];
+
+  let success = avgLv(a,b);
+
+  let roll = Math.random()*100;
+
+  let costMana = 50 * success;
+
+  if(mana < costMana){
+    alert("魔能不足");
+    return;
+  }
+
+  mana -= costMana;
+
+  if(roll < success){
+    alert("成功");
+    let newLv = Math.floor(success);
+    state.level[a] += 1;
+    state.level[b] += 1;
+  } else {
+    alert("失敗");
+    state.level[a] = Math.max(1, Math.floor(state.level[a]*0.7));
+    state.level[b] = Math.max(1, Math.floor(state.level[b]*0.7));
+
+    state.cooldown = true;
+    setTimeout(()=>state.cooldown=false,600000);
+  }
+
+  state.core = [];
+  render();
+}
+
+render();
+
+</script>
 
 </body>
-
 </html>
