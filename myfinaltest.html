@@ -1,192 +1,504 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<title>元素合成增量原型</title>
+<title>元素核心 — 合成增量遊戲原型</title>
 <style>
-body { background:#111; color:#eee; font-family:Arial; padding:20px; }
-h2 { color:#6cf; }
-.box { border:1px solid #444; padding:10px; margin:10px 0; }
-button { margin:3px; padding:6px; cursor:pointer; }
-.element { padding:4px 8px; background:#333; margin:3px; display:inline-block; border-radius:4px; }
-.core { min-height:40px; border:1px dashed #666; padding:10px; }
+  :root{
+    --bg:#0e0c10;
+    --panel:#17141b;
+    --panel2:#1f1a24;
+    --line:#332c3c;
+    --text:#ece6f0;
+    --dim:#8d839a;
+    --earth:#a9824a;
+    --water:#3f8cd6;
+    --fire:#e2502b;
+    --wind:#3fb892;
+    --chaos:#b14fd1;
+    --gold:#e8c468;
+    --danger:#d6433f;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:"Noto Sans TC","Segoe UI",sans-serif;}
+  body{padding:24px;}
+  h1{font-family:"Noto Serif TC",serif;font-weight:700;letter-spacing:2px;font-size:26px;margin:0 0 4px;}
+  .sub{color:var(--dim);font-size:13px;margin-bottom:20px;}
+  .layout{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:start;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:18px;}
+  .panel h2{font-size:14px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin:0 0 14px;font-weight:600;}
+  .res-row{display:flex;gap:18px;margin-bottom:18px;flex-wrap:wrap;}
+  .res{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 16px;min-width:120px;}
+  .res .lbl{font-size:11px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;}
+  .res .val{font-size:20px;font-weight:700;font-family:"Noto Serif TC",serif;}
+  .core-box{display:flex;align-items:center;gap:16px;background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:16px;margin-bottom:8px;}
+  .core-slot{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;border:2px solid var(--line);flex-shrink:0;}
+  .core-info{flex:1;}
+  .core-info .name{font-weight:700;font-size:16px;}
+  .core-info .desc{font-size:12px;color:var(--dim);margin-top:2px;}
+  .core-rate{font-size:13px;color:var(--gold);margin-top:4px;}
+  .empty-core{color:var(--dim);font-size:13px;}
+
+  .elem-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+  .elem-card{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;position:relative;transition:.15s;}
+  .elem-card.locked{opacity:.35;filter:grayscale(1);}
+  .elem-card .top{display:flex;justify-content:space-between;align-items:center;}
+  .elem-card .icon{font-size:20px;}
+  .elem-card .nm{font-weight:700;font-size:13px;}
+  .elem-card .lv{font-size:11px;color:var(--dim);}
+  .elem-card .bar{height:5px;border-radius:3px;background:#2a2532;margin:6px 0 8px;overflow:hidden;}
+  .elem-card .bar i{display:block;height:100%;background:var(--gold);}
+  .elem-card .status{font-size:11px;color:var(--dim);margin-bottom:6px;}
+  .elem-card button{width:100%;border:none;border-radius:6px;padding:6px 0;font-size:12px;cursor:pointer;font-weight:600;}
+  .btn-set{background:var(--gold);color:#241c0a;}
+  .btn-set:hover{filter:brightness(1.08);}
+  .btn-active{background:#3a3242;color:var(--gold);cursor:default;}
+  .btn-lvup{width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 0;font-size:11.5px;cursor:pointer;}
+  .btn-lvup:disabled{opacity:.4;cursor:not-allowed;}
+  .pick-flag{position:absolute;top:6px;right:8px;font-size:11px;color:var(--gold);}
+
+  .essence-grid{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .ess{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:12px;min-width:70px;text-align:center;}
+  .ess b{display:block;font-size:15px;}
+
+  .synth-pick{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+  .pickbox{flex:1;min-width:140px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;cursor:pointer;text-align:center;}
+  .pickbox.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;}
+  .pickbox .name{font-weight:700;font-size:13px;}
+  .pickbox .lv{font-size:11px;color:var(--dim);}
+
+  .result-box{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;margin-bottom:10px;}
+  .cost-line{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);padding:2px 0;}
+  .big-btn{width:100%;padding:11px 0;border:none;border-radius:8px;background:var(--fire);color:#fff;font-weight:700;font-size:14px;cursor:pointer;letter-spacing:1px;}
+  .big-btn:disabled{background:#3a323f;color:var(--dim);cursor:not-allowed;}
+  .log{font-family:monospace;font-size:11.5px;color:var(--dim);max-height:160px;overflow-y:auto;line-height:1.6;}
+  .log .ok{color:var(--wind);}
+  .log .fail{color:var(--danger);}
+  .cooldown{color:var(--danger);font-size:12px;margin-top:6px;}
+  .tier-tag{display:inline-block;font-size:10px;background:#2a2532;color:var(--dim);border-radius:4px;padding:1px 6px;margin-left:6px;}
+  footer{color:var(--dim);font-size:11px;margin-top:10px;text-align:center;}
 </style>
 </head>
 <body>
 
-<h2>魔能：<span id="mana">0</span></h2>
+<h1>⚗ 元素核心</h1>
+<div class="sub">合成增量遊戲原型 — 規則引擎可視化（無資料庫，純前端模擬，重整即重置）</div>
 
-<div class="box">
-<h3>精華</h3>
-<div id="essence"></div>
+<div class="res-row">
+  <div class="res"><div class="lbl">魔能</div><div class="val" id="manaVal">0</div></div>
+  <div class="res"><div class="lbl">合成器狀態</div><div class="val" id="synthStatus" style="font-size:14px;">就緒</div></div>
+  <div class="res"><div class="lbl">已解鎖元素</div><div class="val" id="unlockedCount">4 / 15</div></div>
 </div>
 
-<div class="box">
-<h3>初始元素</h3>
-<div id="elements"></div>
+<div class="layout">
+  <div class="left">
+
+    <div class="panel">
+      <h2>魔能核心</h2>
+      <div class="core-box" id="coreBox"></div>
+    </div>
+
+    <div class="panel">
+      <h2>元素一覽（點擊放入核心）</h2>
+      <div class="elem-grid" id="elemGrid"></div>
+    </div>
+
+    <div class="panel">
+      <h2>精華庫</h2>
+      <div class="essence-grid" id="essenceGrid"></div>
+      <div style="font-size:11px;color:var(--dim);">提示：10 份任一精華 = 1 份指定精華（下方手動轉換，便於湊合成材料）</div>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;" id="convertRow"></div>
+    </div>
+
+  </div>
+
+  <div class="right">
+    <div class="panel">
+      <h2>合成台</h2>
+      <div class="synth-pick" id="synthPick"></div>
+      <div class="result-box" id="synthResult">選擇兩個 idle 元素以開始合成。</div>
+      <button class="big-btn" id="synthBtn" disabled>合成</button>
+      <div class="cooldown" id="cooldownLine" style="display:none;"></div>
+    </div>
+
+    <div class="panel">
+      <h2>紀錄</h2>
+      <div class="log" id="logBox"></div>
+    </div>
+  </div>
 </div>
 
-<div class="box">
-<h3>魔能核心（active）</h3>
-<div id="core" class="core"></div>
-</div>
-
-<div class="box">
-<h3>合成區</h3>
-<div id="craft"></div>
-<button onclick="doCraft()">合成</button>
-</div>
+<footer>Tick：每 1 秒結算一次魔能 / 精華 / EXP。本原型供規則驗證，數值可再平衡。</footer>
 
 <script>
+/* ============ 資料定義 ============ */
+const BASE_ELEMENTS = ["earth","water","fire","wind"];
+const ELEM_META = {
+  earth:{name:"地", icon:"⛰", tier:1, color:"var(--earth)", parts:["earth"]},
+  water:{name:"水", icon:"💧", tier:1, color:"var(--water)", parts:["water"]},
+  fire :{name:"火", icon:"🔥", tier:1, color:"var(--fire)", parts:["fire"]},
+  wind :{name:"風", icon:"🌬", tier:1, color:"var(--wind)", parts:["wind"]},
 
-// ===== 基礎 =====
-let mana = 0;
-let time = 0;
+  earth_water:{name:"地水", icon:"⛰💧", tier:2, color:"var(--earth)", parts:["earth","water"]},
+  earth_fire :{name:"地火", icon:"⛰🔥", tier:2, color:"var(--earth)", parts:["earth","fire"]},
+  earth_wind :{name:"地風", icon:"⛰🌬", tier:2, color:"var(--earth)", parts:["earth","wind"]},
+  water_fire :{name:"水火", icon:"💧🔥", tier:2, color:"var(--water)", parts:["water","fire"]},
+  water_wind :{name:"水風", icon:"💧🌬", tier:2, color:"var(--water)", parts:["water","wind"]},
+  fire_wind  :{name:"火風", icon:"🔥🌬", tier:2, color:"var(--fire)", parts:["fire","wind"]},
 
-const baseElements = ["地","水","火","風"];
+  earth_water_fire:{name:"地水火", icon:"⛰💧🔥", tier:3, color:"var(--gold)", parts:["earth","water","fire"]},
+  earth_water_wind:{name:"地水風", icon:"⛰💧🌬", tier:3, color:"var(--gold)", parts:["earth","water","wind"]},
+  earth_fire_wind :{name:"地火風", icon:"⛰🔥🌬", tier:3, color:"var(--gold)", parts:["earth","fire","wind"]},
+  water_fire_wind :{name:"水火風", icon:"💧🔥🌬", tier:3, color:"var(--gold)", parts:["water","fire","wind"]},
 
-let state = {
-  core: [],
-  idle: ["地","水","火","風"],
-  level: {"地":1,"水":1,"火":1,"風":1},
-  exp: {"地":0,"水":0,"火":0,"風":0},
-  essence: {"地":0,"水":0,"火":0,"風":0},
-  cooldown: false
+  chaos:{name:"混沌", icon:"☯", tier:4, color:"var(--chaos)", parts:["earth","water","fire","wind"]},
 };
-
-// ===== 工具 =====
-function avgLv(a,b){
-  return (state.level[a] + state.level[b]) / 2;
+// 合成樹：兩個元素合成出哪個新元素（依 parts 聯集對應）
+function findResultId(idA, idB){
+  const union = new Set([...ELEM_META[idA].parts, ...ELEM_META[idB].parts]);
+  for(const [id, meta] of Object.entries(ELEM_META)){
+    if(meta.parts.length === union.size && meta.parts.every(p=>union.has(p))){
+      if(id!==idA && id!==idB) return id;
+    }
+  }
+  return null;
 }
 
-// 非線性成本
-function cost(lv, tier){
-  return Math.ceil(2 * Math.pow(lv,1.6) * Math.pow(tier,2.2));
+/* ============ 狀態 ============ */
+const state = {
+  mana: 0,
+  essence: { earth:0, water:0, fire:0, wind:0 }, // 精華只追蹤四個 tier1 類型（合成消耗用未參與元素的精華）
+  elements: {}, // id -> {unlocked, level, exp, location: 'core'|'idle'}
+  coreId: null,
+  synthSelection: [],
+  synthCooldownUntil: 0,
+  onlineStart: Date.now(),
+  fireRollCache: {}, // for display
+};
+BASE_ELEMENTS.forEach(id=>{
+  state.elements[id] = {unlocked:true, level:1, exp:0, location:"idle"};
+});
+Object.keys(ELEM_META).forEach(id=>{
+  if(!state.elements[id]) state.elements[id] = {unlocked:false, level:1, exp:0, location:"idle"};
+});
+
+/* ============ 公式 ============ */
+function expRequired(lv){ return Math.ceil(50 * Math.pow(lv,1.7)); }
+
+function elemMultiplier(id){
+  // 元素特性倍率（針對 core 產能）
+  const onlineMin = (Date.now() - state.onlineStart)/60000;
+  switch(id){
+    case "fire": return 0 + Math.random()*1.5; // 0~150%
+    case "wind": return 1.0; // 頻率以 tick 處理，倍率正常，但 tick 間隔更短
+    case "earth": return 1.10; // 固定 +110% => 等同 ×2.10? 規格寫「固定+110%穩定產出」，這裡解讀為基底的210%
+    case "water": return Math.min(2.0, 1.0 + onlineMin/60); // 1小時內線性到200%
+    default: return 1.0 + 0.5*(ELEM_META[id]?.tier||1); // 高階元素基礎加成，可再平衡
+  }
 }
 
-// ===== UI =====
+function manaPerTick(id){
+  const lv = state.elements[id].level;
+  const base = 5;
+  const lvMul = 1 + (lv-1)*0.25;
+  let mult = elemMultiplier(id);
+  if(id==="earth") mult = 1 + 1.10; // 210%
+  return base * lvMul * mult;
+}
+
+function essencePerTick(id){
+  const lv = state.elements[id].level;
+  return 1 + (lv-1)*0.15;
+}
+
+function essenceCostPerType(avgLv, tier){
+  return Math.ceil(2 * Math.pow(avgLv,1.6) * Math.pow(tier,2.2));
+}
+
+/* ============ Tick：每秒結算 ============ */
+setInterval(gameTick, 1000);
+function gameTick(){
+  // core 元素：產魔能
+  if(state.coreId){
+    const id = state.coreId;
+    const isWind = id==="wind";
+    let gain = manaPerTick(id);
+    if(isWind) gain *= 0.6; // 更快但單次較低（頻率以下方extraTick模擬）
+    state.mana += gain;
+    if(isWind){
+      // 模擬更高頻率：額外 0.4 次的產出
+      state.mana += manaPerTick(id)*0.4;
+    }
+  }
+  // idle 元素：產精華
+  Object.entries(state.elements).forEach(([id, e])=>{
+    if(!e.unlocked) return;
+    if(e.location !== "idle") return;
+    if(BASE_ELEMENTS.includes(id)){
+      state.essence[id] += essencePerTick(id);
+    } else {
+      // 高階元素 idle：分配精華到其組成元素（簡化規則延伸，不違反核心）
+      const g = essencePerTick(id)/ELEM_META[id].parts.length;
+      ELEM_META[id].parts.forEach(p=> state.essence[p]+=g );
+    }
+  });
+  render();
+}
+
+// 升級：花費魔能，不再隨時間累積 EXP
+function manaLevelUpCost(lv){
+  return Math.ceil(50 * Math.pow(lv,1.7));
+}
+function levelUp(id){
+  const e = state.elements[id];
+  if(!e.unlocked) return;
+  const cost = manaLevelUpCost(e.level);
+  if(state.mana < cost){ log(`魔能不足，升級「${ELEM_META[id].name}」需要 ${cost.toLocaleString()} 魔能。`,"fail"); return; }
+  state.mana -= cost;
+  e.level += 1;
+  log(`「${ELEM_META[id].name}」升級至 Lv${e.level}（花費 ${cost.toLocaleString()} 魔能）`,"ok");
+  render();
+}
+
+/* ============ 互動：核心 ============ */
+function setCore(id){
+  if(state.coreId === id) return;
+  if(state.coreId){
+    state.elements[state.coreId].location = "idle";
+  }
+  state.elements[id].location = "core";
+  state.coreId = id;
+  log(`將「${ELEM_META[id].name}」放入魔能核心，原核心元素回到 idle。`, "ok");
+  render();
+}
+
+function removeFromCore(id){
+  if(state.coreId !== id) return;
+  state.elements[id].location = "idle";
+  state.coreId = null;
+  log(`將「${ELEM_META[id].name}」從魔能核心取出，核心目前空置。`, "ok");
+  render();
+}
+
+/* ============ 互動：合成選擇 ============ */
+function toggleSynthPick(id){
+  if(Date.now() < state.synthCooldownUntil) return;
+  const e = state.elements[id];
+  if(!e.unlocked || e.location !== "idle") return;
+  const idx = state.synthSelection.indexOf(id);
+  if(idx>=0){ state.synthSelection.splice(idx,1); }
+  else {
+    if(state.synthSelection.length>=2) state.synthSelection.shift();
+    state.synthSelection.push(id);
+  }
+  render();
+}
+
+function doSynth(){
+  if(Date.now() < state.synthCooldownUntil) return;
+  const [a,b] = state.synthSelection;
+  if(!a || !b) return;
+  const resultId = findResultId(a,b);
+  if(!resultId){ log("這個組合沒有對應的合成結果。","fail"); return; }
+
+  const lvA = state.elements[a].level, lvB = state.elements[b].level;
+  const avgLv = (lvA+lvB)/2;
+  const tier = ELEM_META[resultId].tier;
+  const perType = essenceCostPerType(avgLv, tier);
+  const missing = BASE_ELEMENTS.filter(x=>!ELEM_META[resultId].parts.includes(x) || (ELEM_META[a].parts.length+ELEM_META[b].parts.length<4 && false));
+  // 規則：消耗「未參與合成的元素精華」=> 以 a,b 的 tier1 組成聯集之外的 BASE_ELEMENTS
+  const involved = new Set([...ELEM_META[a].parts, ...ELEM_META[b].parts]);
+  const missingTypes = BASE_ELEMENTS.filter(x=>!involved.has(x));
+  const manaCost = Math.ceil(20 * Math.pow(avgLv,1.4) * Math.pow(tier,1.8));
+
+  if(missingTypes.length===0){
+    log("混沌合成：四元素皆參與，無可消耗精華類型，改以雙倍魔能結算。","ok");
+  }
+  const essenceTotalCost = perType * Math.max(missingTypes.length,1);
+
+  if(state.mana < manaCost){ log(`魔能不足（需要 ${manaCost.toFixed(0)}）。`,"fail"); return; }
+  const enough = missingTypes.every(t=>state.essence[t] >= perType);
+  if(missingTypes.length>0 && !enough){ log(`精華不足，每類需要 ${perType}。`,"fail"); return; }
+
+  state.mana -= manaCost;
+  missingTypes.forEach(t=> state.essence[t]-=perType );
+
+  const successRate = Math.min(95, (lvA+lvB)/2); // %
+  const roll = Math.random()*100;
+  if(roll <= successRate){
+    state.elements[resultId].unlocked = true;
+    if(state.elements[resultId].level<1) state.elements[resultId].level=1;
+    log(`✅ 合成成功！解鎖「${ELEM_META[resultId].name}」（成功率 ${successRate.toFixed(1)}%，骰值 ${roll.toFixed(1)}）`,"ok");
+  } else {
+    [a,b].forEach(id=>{
+      const e = state.elements[id];
+      e.level = Math.max(1, Math.floor(e.level*0.7));
+      e.exp = expRequired(e.level)*0.5;
+    });
+    state.synthCooldownUntil = Date.now() + 10*60*1000; // 10分鐘
+    log(`❌ 合成失敗（成功率 ${successRate.toFixed(1)}%，骰值 ${roll.toFixed(1)}）。等級下修，合成器進入 10 分鐘冷卻。`,"fail");
+  }
+  state.synthSelection = [];
+  render();
+}
+
+/* ============ 精華轉換（10:1）============ */
+function convert(from, to){
+  if(state.essence[from] < 10) return;
+  state.essence[from] -= 10;
+  state.essence[to] += 1;
+  log(`轉換：10 ${ELEM_META[from].name}精華 → 1 ${ELEM_META[to].name}精華`,"ok");
+  render();
+}
+
+/* ============ 渲染 ============ */
+function log(msg, cls){
+  const box = document.getElementById("logBox");
+  const line = document.createElement("div");
+  line.className = cls||"";
+  const t = new Date().toLocaleTimeString();
+  line.textContent = `[${t}] ${msg}`;
+  box.prepend(line);
+  while(box.childNodes.length>80) box.removeChild(box.lastChild);
+}
+
 function render(){
-  document.getElementById("mana").innerText = mana;
+  document.getElementById("manaVal").textContent = Math.floor(state.mana).toLocaleString();
+  const unlockedNum = Object.values(state.elements).filter(e=>e.unlocked).length;
+  document.getElementById("unlockedCount").textContent = `${unlockedNum} / ${Object.keys(ELEM_META).length}`;
 
-  // 元素
-  let el = document.getElementById("elements");
-  el.innerHTML = state.idle.map(e =>
-    `<button onclick="toCore('${e}')">${e} Lv${state.level[e]}</button>`
-  ).join("");
+  // core box
+  const coreBox = document.getElementById("coreBox");
+  if(state.coreId){
+    const id = state.coreId, meta = ELEM_META[id], e = state.elements[id];
+    coreBox.innerHTML = `
+      <div class="core-slot" style="background:${meta.color}33;border-color:${meta.color};">${meta.icon}</div>
+      <div class="core-info">
+        <div class="name">${meta.name} <span class="tier-tag">Tier ${meta.tier}</span></div>
+        <div class="desc">等級 ${e.level}</div>
+        <div class="core-rate">產能：約 ${manaEstimate(id)} 魔能 / 秒</div>
+      </div>
+      <button id="removeCoreBtn" style="background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px 14px;cursor:pointer;font-size:12px;white-space:nowrap;">取出</button>`;
+    document.getElementById("removeCoreBtn").onclick = ()=>removeFromCore(id);
+  } else {
+    coreBox.innerHTML = `<div class="core-slot">—</div><div class="empty-core">尚未放入任何元素，核心無產出。</div>`;
+  }
 
-  // core
-  document.getElementById("core").innerHTML =
-    state.core.map(e=>`<span class="element">${e}</span>`).join("");
+  // elem grid
+  const grid = document.getElementById("elemGrid");
+  grid.innerHTML = "";
+  Object.entries(ELEM_META).forEach(([id,meta])=>{
+    const e = state.elements[id];
+    if(!e.unlocked) return; // 未解鎖元素完全隱藏
+    const card = document.createElement("div");
+    card.className = "elem-card";
+    const statusTxt = e.location==="core" ? "於核心中" : "idle（產精華）";
+    const lvCost = manaLevelUpCost(e.level);
+    card.innerHTML = `
+      <div class="top"><span class="icon">${meta.icon}</span><span class="lv">Lv${e.level}</span></div>
+      <div class="nm">${meta.name} <span class="tier-tag">T${meta.tier}</span></div>
+      <div class="status">${statusTxt}</div>
+      <button class="btn-lvup" data-id="${id}" style="background:var(--panel2);border:1px solid var(--line);color:var(--gold);margin-bottom:6px;">升級（${lvCost.toLocaleString()} 魔能）</button>
+      ${e.location==="core" ? `<button class="btn-active">於核心中</button>` : `<button class="btn-set" data-id="${id}">放入核心</button>`}
+    `;
+    grid.appendChild(card);
+  });
+  grid.querySelectorAll(".btn-set").forEach(b=> b.onclick=()=>setCore(b.dataset.id));
+  grid.querySelectorAll(".btn-lvup").forEach(b=>{
+    b.disabled = state.mana < manaLevelUpCost(state.elements[b.dataset.id].level);
+    b.onclick=()=>levelUp(b.dataset.id);
+  });
 
   // essence
-  let es = document.getElementById("essence");
-  es.innerHTML = baseElements.map(e =>
-    `${e}精華: ${state.essence[e] || 0} <button onclick="convert('${e}')">轉換</button>`
-  ).join("<br>");
-}
-
-// ===== 核心 =====
-function toCore(e){
-  let i = state.idle.indexOf(e);
-  if(i>-1){
-    state.idle.splice(i,1);
-    state.core.push(e);
-  }
-  render();
-}
-
-// ===== 魔能產出 + EXP =====
-setInterval(()=>{
-  time++;
-
-  state.core.forEach(e=>{
-    let base = 10;
-    let lv = state.level[e];
-
-    let gain = base * lv * 1.1;
-    mana += gain;
-
-    state.exp[e] += gain * 0.5;
-
-    // 升級
-    let need = 50 * Math.pow(lv,1.7);
-    if(state.exp[e] > need){
-      state.level[e]++;
-      state.exp[e] = 0;
-    }
+  const essGrid = document.getElementById("essenceGrid");
+  essGrid.innerHTML = "";
+  BASE_ELEMENTS.forEach(id=>{
+    const meta = ELEM_META[id];
+    const box = document.createElement("div");
+    box.className = "ess";
+    box.innerHTML = `${meta.icon} ${meta.name}<b>${Math.floor(state.essence[id])}</b>`;
+    essGrid.appendChild(box);
   });
 
-  // idle → 精華 + EXP
-  state.idle.forEach(e=>{
-    state.essence[e] += state.level[e] * 2;
-    state.exp[e] += state.level[e];
-
-    let need = 50 * Math.pow(state.level[e],1.7);
-    if(state.exp[e] > need){
-      state.level[e]++;
-      state.exp[e]=0;
-    }
+  const convRow = document.getElementById("convertRow");
+  convRow.innerHTML = "";
+  BASE_ELEMENTS.forEach(from=>{
+    BASE_ELEMENTS.filter(t=>t!==from).forEach(to=>{
+      const btn = document.createElement("button");
+      btn.textContent = `${ELEM_META[from].icon}→${ELEM_META[to].icon}`;
+      btn.style = "font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text);cursor:pointer;";
+      btn.onclick = ()=>convert(from,to);
+      convRow.appendChild(btn);
+    });
   });
 
-  render();
-},1000);
+  // synth pick
+  const pickArea = document.getElementById("synthPick");
+  pickArea.innerHTML = "";
+  Object.entries(state.elements).filter(([id,e])=>e.unlocked && e.location==="idle").forEach(([id,e])=>{
+    const meta = ELEM_META[id];
+    const box = document.createElement("div");
+    box.className = "pickbox" + (state.synthSelection.includes(id)?" sel":"");
+    box.innerHTML = `<div class="name">${meta.icon} ${meta.name}</div><div class="lv">Lv${e.level}</div>`;
+    box.onclick = ()=>toggleSynthPick(id);
+    pickArea.appendChild(box);
+  });
 
-// ===== 精華轉換 =====
-function convert(e){
-  let from = state.essence[e];
-  if(from >= 10){
-    state.essence[e] -= 10;
-    let target = baseElements[(baseElements.indexOf(e)+1)%4];
-    state.essence[target] = (state.essence[target]||0)+1;
-  }
-  render();
-}
-
-// ===== 合成 =====
-function doCraft(){
-  if(state.cooldown) return alert("冷卻中");
-
-  if(state.core.length != 2){
-    return alert("需兩元素");
-  }
-
-  let a = state.core[0];
-  let b = state.core[1];
-
-  let success = avgLv(a,b);
-
-  let roll = Math.random()*100;
-
-  let costMana = 50 * success;
-
-  if(mana < costMana){
-    alert("魔能不足");
-    return;
-  }
-
-  mana -= costMana;
-
-  if(roll < success){
-    alert("成功");
-    let newLv = Math.floor(success);
-    state.level[a] += 1;
-    state.level[b] += 1;
+  // synth result preview
+  const resBox = document.getElementById("synthResult");
+  const btn = document.getElementById("synthBtn");
+  const cdLine = document.getElementById("cooldownLine");
+  const remainingCd = state.synthCooldownUntil - Date.now();
+  if(remainingCd>0){
+    cdLine.style.display="block";
+    cdLine.textContent = `合成器冷卻中，剩餘 ${Math.ceil(remainingCd/1000)} 秒`;
+    btn.disabled = true;
   } else {
-    alert("失敗");
-    state.level[a] = Math.max(1, Math.floor(state.level[a]*0.7));
-    state.level[b] = Math.max(1, Math.floor(state.level[b]*0.7));
-
-    state.cooldown = true;
-    setTimeout(()=>state.cooldown=false,600000);
+    cdLine.style.display="none";
   }
 
-  state.core = [];
-  render();
+  if(state.synthSelection.length===2){
+    const [a,b] = state.synthSelection;
+    const resultId = findResultId(a,b);
+    const lvA=state.elements[a].level, lvB=state.elements[b].level;
+    const avgLv=(lvA+lvB)/2;
+    if(!resultId){
+      resBox.innerHTML = `這個組合（${ELEM_META[a].name} + ${ELEM_META[b].name}）沒有定義中的合成結果。`;
+      btn.disabled = true;
+    } else {
+      const tier = ELEM_META[resultId].tier;
+      const perType = essenceCostPerType(avgLv, tier);
+      const involved = new Set([...ELEM_META[a].parts, ...ELEM_META[b].parts]);
+      const missingTypes = BASE_ELEMENTS.filter(x=>!involved.has(x));
+      const manaCost = Math.ceil(20 * Math.pow(avgLv,1.4) * Math.pow(tier,1.8));
+      const successRate = Math.min(95, avgLv);
+      resBox.innerHTML = `
+        <div><b>${ELEM_META[a].name} + ${ELEM_META[b].name} → ${ELEM_META[resultId].name}</b> ${state.elements[resultId].unlocked?'<span style="color:var(--dim);">（已解鎖，仍可重複嘗試提升等級）</span>':''}</div>
+        <div class="cost-line"><span>成功率</span><span>${successRate.toFixed(1)}%</span></div>
+        <div class="cost-line"><span>魔能消耗</span><span>${manaCost.toLocaleString()}</span></div>
+        ${missingTypes.length? missingTypes.map(t=>`<div class="cost-line"><span>${ELEM_META[t].name}精華消耗</span><span>${perType} （持有 ${Math.floor(state.essence[t])}）</span></div>`).join("") : `<div class="cost-line"><span>精華消耗</span><span>無（四元素皆參與）</span></div>`}
+      `;
+      const enoughMana = state.mana>=manaCost;
+      const enoughEss = missingTypes.every(t=>state.essence[t]>=perType);
+      btn.disabled = remainingCd>0 || !enoughMana || !enoughEss;
+    }
+  } else {
+    resBox.textContent = `已選擇 ${state.synthSelection.length} / 2 個元素，請從左側點擊兩個 idle 元素。`;
+    btn.disabled = true;
+  }
 }
+
+function manaEstimate(id){
+  let v = manaPerTick(id);
+  if(id==="wind") v = v*0.6 + manaPerTick(id)*0.4*0.6;
+  return v.toFixed(1);
+}
+
+document.getElementById("synthBtn").onclick = doSynth;
 
 render();
-
+log("遊戲已啟動。地 / 水 / 火 / 風 已解鎖，請放入一個元素到魔能核心開始產出。","ok");
 </script>
-
 </body>
 </html>
