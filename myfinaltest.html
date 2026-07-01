@@ -11,10 +11,11 @@
     --line:#332c3c;
     --text:#ece6f0;
     --dim:#8d839a;
-    --earth:#a9824a;
-    --water:#3f8cd6;
-    --fire:#e2502b;
-    --wind:#3fb892;
+    --mana:#c879c9;
+    --earth:#6f4a2c;
+    --water:#3fa0f5;
+    --fire:#e3242c;
+    --wind:#c9c9cf;
     --chaos:#b14fd1;
     --gold:#e8c468;
     --danger:#d6433f;
@@ -32,7 +33,15 @@
   .res{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 16px;min-width:120px;}
   .res .lbl{font-size:11px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;}
   .res .val{font-size:20px;font-weight:700;font-family:"Noto Serif TC",serif;}
-  .core-box{display:flex;align-items:center;gap:16px;background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:16px;margin-bottom:8px;}
+  .flask-row{display:flex;gap:14px;justify-content:center;align-items:flex-end;margin-bottom:18px;flex-wrap:wrap;}
+  .flask-col{display:flex;flex-direction:column;align-items:center;}
+  .flask-col .fname{font-family:"Noto Serif TC",serif;font-size:11px;fill:var(--text);}
+  .flask-col .fval{font-size:10px;fill:var(--dim);}
+  .rune-frame{border:2px solid var(--line);border-radius:10px;overflow:hidden;}
+  .rune-strip{font-size:12px;letter-spacing:6px;text-align:center;padding:5px 0;color:#554b66;background:var(--panel2);}
+  .rune-strip.top{border-bottom:1px solid var(--line);}
+  .rune-strip.bottom{border-top:1px solid var(--line);}
+  .core-box{display:flex;align-items:center;gap:16px;background:var(--panel2);border-radius:10px;padding:16px;margin-bottom:0;}
   .core-slot{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;border:2px solid var(--line);flex-shrink:0;}
   .core-info{flex:1;}
   .core-info .name{font-weight:700;font-size:16px;}
@@ -85,8 +94,8 @@
 <h1>⚗ 元素核心</h1>
 <div class="sub">合成增量遊戲原型 — 規則引擎可視化（無資料庫，純前端模擬，重整即重置）</div>
 
+<div class="flask-row" id="flaskRow"></div>
 <div class="res-row">
-  <div class="res"><div class="lbl">魔能</div><div class="val" id="manaVal">0</div></div>
   <div class="res"><div class="lbl">合成器狀態</div><div class="val" id="synthStatus" style="font-size:14px;">就緒</div></div>
   <div class="res"><div class="lbl">已解鎖元素</div><div class="val" id="unlockedCount">4 / 15</div></div>
 </div>
@@ -96,7 +105,11 @@
 
     <div class="panel">
       <h2>魔能核心</h2>
-      <div class="core-box" id="coreBox"></div>
+      <div class="rune-frame">
+        <div class="rune-strip top">ᛟ ᚱ ᛒ ᛗ ᚨ ᛚ ᛞ ᛁ ᚺ ᚦ ᚢ ᚠ</div>
+        <div class="core-box" id="coreBox"></div>
+        <div class="rune-strip bottom">ᚠ ᚢ ᚦ ᚺ ᚨ ᛁ ᛚ ᛗ ᛒ ᚱ ᛟ ᚦ</div>
+      </div>
     </div>
 
     <div class="panel">
@@ -105,10 +118,9 @@
     </div>
 
     <div class="panel">
-      <h2>精華庫</h2>
-      <div class="essence-grid" id="essenceGrid"></div>
-      <div style="font-size:11px;color:var(--dim);">提示：10 份任一精華 = 1 份指定精華（下方手動轉換，便於湊合成材料）</div>
-      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;" id="convertRow"></div>
+      <h2>精華轉換</h2>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">10 份任一精華 = 1 份指定精華，數量請見上方燒瓶。</div>
+      <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;" id="convertRow"></div>
     </div>
 
   </div>
@@ -352,7 +364,36 @@ function convert(from, to){
   render();
 }
 
-/* ============ 渲染 ============ */
+/* ============ 燒瓶渲染 ============ */
+function flaskSVG({key, label, value, color, big}){
+  const w = big? 68:54, h = big? 106:84;
+  const r = big? 32:24;
+  const cx = w/2, cy = big? 68:52;
+  const neckW = big? 12:10, neckH = big? 18:14;
+  const corkW = neckW+2, corkH = 6;
+  const clipId = "clip_"+key;
+  return `
+  <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${label}燒瓶">
+    <defs><clipPath id="${clipId}"><circle cx="${cx}" cy="${cy}" r="${r}"/></clipPath></defs>
+    <rect x="${cx-corkW/2}" y="${cy-r-neckH-corkH+2}" width="${corkW}" height="${corkH}" rx="2" fill="#8a6a45"/>
+    <rect x="${cx-neckW/2}" y="${cy-r-neckH+2}" width="${neckW}" height="${neckH}" fill="none" stroke="var(--line)" stroke-width="2"/>
+    <rect x="${cx-neckW/2-5}" y="${cy-r-neckH}" width="${neckW+10}" height="5" rx="1" fill="none" stroke="var(--line)" stroke-width="2"/>
+    <g clip-path="url(#${clipId})"><rect x="0" y="0" width="${w}" height="${h}" fill="${color}"/></g>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--line)" stroke-width="2.5"/>
+    <text x="${cx}" y="${cy-4}" text-anchor="middle" class="fname" style="font-size:${big?13:12}px;">${label}</text>
+    <text x="${cx}" y="${cy+12}" text-anchor="middle" class="fval" style="font-size:${big?11:10}px;">${value}</text>
+  </svg>`;
+}
+function renderFlasks(){
+  const row = document.getElementById("flaskRow");
+  const manaHtml = `<div class="flask-col">${flaskSVG({key:"mana",label:"魔能",value:Math.floor(state.mana).toLocaleString(),color:"var(--mana)",big:true})}</div>`;
+  const essHtml = BASE_ELEMENTS.map(id=>{
+    const meta = ELEM_META[id];
+    return `<div class="flask-col">${flaskSVG({key:id,label:meta.name,value:Math.floor(state.essence[id]),color:`var(--${id})`,big:false})}</div>`;
+  }).join("");
+  row.innerHTML = manaHtml + essHtml;
+}
+
 function log(msg, cls){
   const box = document.getElementById("logBox");
   const line = document.createElement("div");
@@ -364,7 +405,7 @@ function log(msg, cls){
 }
 
 function render(){
-  document.getElementById("manaVal").textContent = Math.floor(state.mana).toLocaleString();
+  renderFlasks();
   const unlockedNum = Object.values(state.elements).filter(e=>e.unlocked).length;
   document.getElementById("unlockedCount").textContent = `${unlockedNum} / ${Object.keys(ELEM_META).length}`;
 
@@ -408,17 +449,6 @@ function render(){
   grid.querySelectorAll(".btn-lvup").forEach(b=>{
     b.disabled = state.mana < manaLevelUpCost(state.elements[b.dataset.id].level);
     b.onclick=()=>levelUp(b.dataset.id);
-  });
-
-  // essence
-  const essGrid = document.getElementById("essenceGrid");
-  essGrid.innerHTML = "";
-  BASE_ELEMENTS.forEach(id=>{
-    const meta = ELEM_META[id];
-    const box = document.createElement("div");
-    box.className = "ess";
-    box.innerHTML = `${meta.icon} ${meta.name}<b>${Math.floor(state.essence[id])}</b>`;
-    essGrid.appendChild(box);
   });
 
   const convRow = document.getElementById("convertRow");
